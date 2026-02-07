@@ -136,6 +136,8 @@ function startVideoAction() {
     }
     video.onended = videoFinished;
 }
+window.startVideoAction = startVideoAction;
+
 
 
 function videoFinished() {
