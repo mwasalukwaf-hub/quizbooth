@@ -594,7 +594,12 @@ if ($site_id > 0) {
         <!-- Language Selection -->
 
         <div id="lang-screen" class="hidden">
-            <h2 class="text-warning mb-2" style="font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px;"><?php echo !empty($site_name) ? htmlspecialchars($site_name) : "Smirnoff Ice"; ?></h2>
+            <div class="mb-4">
+                <img src="assets/logo.png" alt="Smirnoff Ice" style="max-width: 150px; height: auto;">
+            </div>
+            <?php if(!empty($site_name) && $site_name != "Smirnoff Ice"): ?>
+                <h2 class="text-warning mb-2" style="font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px;"><?php echo htmlspecialchars($site_name); ?></h2>
+            <?php endif; ?>
             <h1 class="mb-4">Select Language / Chagua Lugha</h1>
             <div class="d-flex flex-wrap justify-content-center">
                 <button class="btn btn-outline-light lang-btn" onclick="setLang('en')">🇺🇸 English</button>

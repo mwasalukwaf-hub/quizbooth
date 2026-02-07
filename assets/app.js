@@ -147,7 +147,13 @@ function videoFinished() {
         video.onended = null;
     }
     document.getElementById('video-screen').classList.add('hidden');
-    document.getElementById('lang-screen').classList.remove('hidden');
+    // Skip Lang, Age, Name -> Go straight to Start Screen
+    // Defaulting to English if not set? It is 'en' by default.
+    document.getElementById('start-screen').classList.remove('hidden');
+
+    // Maybe hide "Welcome" text if we want to be faster? 
+    // Ensuring background is set?
+    updateBackground('assets/splash.png');
 }
 
 function toggleRotate() {
