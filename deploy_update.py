@@ -12,7 +12,8 @@ FILES = {
     r"c:\xampp\htdocs\quizbooth\api\admin_actions.php": "api/admin_actions.php",
     r"c:\xampp\htdocs\quizbooth\ba\game.php": "ba/game.php",
     r"c:\xampp\htdocs\quizbooth\index.php": "index.php",
-    r"c:\xampp\htdocs\quizbooth\assets\app.js": "assets/app.js"
+    r"c:\xampp\htdocs\quizbooth\assets\app.js": "assets/app.js",
+    r"c:\xampp\htdocs\quizbooth\assets\smice2.mp4": "assets/smice2.mp4"
 }
 
 def upload_files():

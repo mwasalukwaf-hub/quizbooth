@@ -56,7 +56,7 @@ if ('serviceWorker' in navigator) {
 // Aggressively preload videos into cache
 function preloadVideos() {
     const videos = [
-        'assets/smice.mp4'
+        'assets/smice2.mp4'
     ];
 
     // Create a background fetch for each video
@@ -71,13 +71,19 @@ function preloadVideos() {
 }
 
 // Start preloading immediately
-window.addEventListener('load', preloadVideos);
+window.addEventListener('load', () => {
+    preloadVideos();
+    // Auto-enter app if splash is hidden (direct link mode)
+    const splash = document.getElementById('splash-screen');
+    if (splash && splash.style.display === 'none') {
+        playIntroVideo();
+    }
+});
 
 function enterApp() {
     let splash = document.getElementById('splash-screen');
     const mainContainer = document.getElementById('main-container');
     const videoScreen = document.getElementById('video-screen');
-    const video = document.getElementById('intro-video');
 
     // Start fade out
     splash.classList.add('fade-out');
@@ -87,46 +93,65 @@ function enterApp() {
     videoScreen.classList.remove('hidden');
     document.getElementById('back-btn').classList.remove('hidden');
 
-    // Initiate Video IMMEDIATELY to catch user gesture
-    if (video) {
-        video.currentTime = 0;
-
-        // Hide loading text when playing
-        video.onplaying = () => {
-            const loader = document.getElementById('video-loading');
-            if (loader) loader.style.display = 'none';
-        };
-
-        // If video fails to load, just skip it
-        video.onerror = () => {
-            console.log("Video error, skipping...");
-            videoFinished();
-        };
-
-        video.muted = false; // Unmute to allow audio playback
-
-        let playPromise = video.play();
-
-        if (playPromise !== undefined) {
-            playPromise.then(_ => {
-                console.log("Playback started");
-            }).catch(error => {
-                console.log("Playback failed:", error);
-                // On failure, show controls so user can manual play
-                video.controls = true;
-                const loader = document.getElementById('video-loading');
-                if (loader) loader.innerText = "Tap to play vibe";
-            });
-        }
-        video.onended = videoFinished;
-    }
-
+    playIntroVideo();
 
     setTimeout(() => {
         splash.style.display = 'none';
+        splash.classList.remove('fade-out'); // Reset class for future use
         // Ensure background is correct
         updateBackground('');
     }, 500);
+}
+
+function playIntroVideo() {
+    const video = document.getElementById('intro-video');
+    if (!video) return;
+
+    video.currentTime = 0;
+
+    // Hide loading text when playing
+    video.onplaying = () => {
+        const loader = document.getElementById('video-loading');
+        if (loader) loader.style.display = 'none';
+    };
+
+    // If video fails to load, just skip it
+    video.onerror = () => {
+        console.log("Video error, skipping...");
+        videoFinished();
+    };
+
+    // Force unmute
+    video.muted = false;
+
+    let playPromise = video.play();
+
+    if (playPromise !== undefined) {
+        playPromise.then(_ => {
+            console.log("Playback started (unmuted)");
+        }).catch(error => {
+            console.log("Autoplay unmuted failed, trying muted fallback...");
+            video.muted = true;
+            video.play().then(() => {
+                console.log("Playback started (muted)");
+                // Add "Tap Video to Unmute" listener
+                const unmuteHandler = () => {
+                    video.muted = false;
+                    video.volume = 1.0;
+                    video.play();
+                };
+                video.addEventListener('click', unmuteHandler, { once: true });
+
+                // Also show a temporary visual hint if desired, or just rely on user tapping naturally.
+                // Given user instructions, we'll keep it invisible. 
+            }).catch(e => {
+                console.log("Autoplay completely failed:", e);
+                const loader = document.getElementById('video-loading');
+                if (loader) loader.innerText = "Tap START to begin";
+            });
+        });
+    }
+    video.onended = videoFinished;
 }
 
 

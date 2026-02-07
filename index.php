@@ -486,6 +486,7 @@ if ($site_id > 0) {
             width: 100%;
             height: 100%;
             object-fit: contain; /* Show all of it by default */
+            cursor: pointer;
         }
         #intro-video.rotated {
             transform: rotate(90deg);
@@ -559,29 +560,25 @@ if ($site_id > 0) {
 
 
     <!-- Splash Screen -->
-    <div id="splash-screen" onclick="enterApp()">
+    <div id="splash-screen" onclick="enterApp()" style="display: none;">
         <div class="info-icon" onclick="event.stopPropagation(); toggleDisclaimer(event)">i</div>
         <button class="btn-get-started">TAP TO START</button>
     </div>
 
-    <div class="quiz-container fade-in hidden" id="main-container">
+    <div class="quiz-container fade-in" id="main-container">
 
         <!-- Video Screen -->
-        <div id="video-screen" class="hidden">
+        <div id="video-screen">
             <div class="video-wrapper">
-                <video id="intro-video" playsinline webkit-playsinline preload="auto">
-                    <source src="assets/smice.mp4" type="video/mp4">
+                <video id="intro-video" playsinline webkit-playsinline preload="auto" autoplay>
+                    <source src="assets/smice2.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div id="video-loading">Loading Vibe...</div>
-                <div class="video-controls-overlay">
-                    <button class="video-btn" onclick="toggleRotate()">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M16.48 15.52L14.93 13.97C15.57 13.3 16 12.38 16 11.33C16 9.04 14.35 6.45 12 5.31C9.65 6.45 8 9.04 8 11.33C8 12.38 8.43 13.3 9.07 13.97L7.52 15.52C6.58 14.51 6 13.06 6 11.33C6 7.74 8.5 4.14 12 2.76C15.5 4.14 18 7.74 18 11.33C18 13.06 17.42 14.51 16.48 15.52M12 18C10.5 18 9.21 16.94 8.71 15.5H10.58L12 16.92L13.42 15.5H15.29C14.79 16.94 13.5 18 12 18Z"/>
-                        </svg>
-                        ROTATE
+                <div class="video-controls-overlay" style="justify-content: center;">
+                    <button class="video-btn" onclick="videoFinished()">
+                        START
                     </button>
-
                 </div>
             </div>
         </div>
