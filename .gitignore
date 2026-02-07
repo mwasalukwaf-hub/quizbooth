@@ -1,0 +1,8 @@
+.env
+vendor/
+node_modules/
+.vscode/
+.idea/
+*.log
+tmp/
+setup.zip
