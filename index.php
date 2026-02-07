@@ -495,28 +495,34 @@ if ($site_id > 0) {
             object-fit: cover; /* Fullscreen when rotated */
         }
         .video-controls-overlay {
-            position: absolute;
-            bottom: 40px;
-            left: 20px;
-            right: 20px;
+            position: fixed;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            width: 100%;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            z-index: 210;
+            z-index: 2000;
+            pointer-events: none;
         }
         .video-btn {
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255,255,255,0.4);
-            color: white;
-            padding: 12px 25px;
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.9);
+            color: #d41b2c;
+            border: 2px solid white;
+            padding: 15px 40px;
             border-radius: 50px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            font-size: 1.2rem;
+            animation: pulse 2s infinite;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            cursor: pointer;
         }
         .video-btn:active {
             transform: scale(0.95);
@@ -570,13 +576,13 @@ if ($site_id > 0) {
         <!-- Video Screen -->
         <div id="video-screen">
             <div class="video-wrapper">
-                <video id="intro-video" playsinline webkit-playsinline preload="auto" autoplay>
+                <video id="intro-video" playsinline webkit-playsinline preload="auto">
                     <source src="assets/smice2.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
-                <div id="video-loading">Loading Vibe...</div>
-                <div class="video-controls-overlay" style="justify-content: center;">
-                    <button class="video-btn" onclick="videoFinished()">
+                <div id="video-loading">LOADING VIBE...</div>
+                <div id="video-controls" class="video-controls-overlay" style="justify-content: center;">
+                    <button class="video-btn" onclick="startVideoAction()">
                         START
                     </button>
                 </div>

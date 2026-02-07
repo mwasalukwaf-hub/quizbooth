@@ -71,12 +71,13 @@ function preloadVideos() {
 }
 
 // Start preloading immediately
+// Start preloading immediately
 window.addEventListener('load', () => {
     preloadVideos();
     // Auto-enter app if splash is hidden (direct link mode)
     const splash = document.getElementById('splash-screen');
     if (splash && splash.style.display === 'none') {
-        playIntroVideo();
+        enterApp();
     }
 });
 
@@ -93,7 +94,7 @@ function enterApp() {
     videoScreen.classList.remove('hidden');
     document.getElementById('back-btn').classList.remove('hidden');
 
-    playIntroVideo();
+    // DO NOT play video automatically. User must click START.
 
     setTimeout(() => {
         splash.style.display = 'none';
@@ -103,52 +104,34 @@ function enterApp() {
     }, 500);
 }
 
-function playIntroVideo() {
+function startVideoAction() {
     const video = document.getElementById('intro-video');
+    const controls = document.getElementById('video-controls');
+    const loader = document.getElementById('video-loading');
+
     if (!video) return;
+
+    // HIde UI immediately
+    if (controls) controls.style.display = 'none';
+    if (loader) loader.style.display = 'none';
 
     video.currentTime = 0;
 
-    // Hide loading text when playing
-    video.onplaying = () => {
-        const loader = document.getElementById('video-loading');
-        if (loader) loader.style.display = 'none';
-    };
-
-    // If video fails to load, just skip it
-    video.onerror = () => {
-        console.log("Video error, skipping...");
-        videoFinished();
-    };
-
-    // Force unmute
+    // User triggered this, so we can Unmute safely!
     video.muted = false;
 
     let playPromise = video.play();
 
     if (playPromise !== undefined) {
         playPromise.then(_ => {
-            console.log("Playback started (unmuted)");
+            console.log("Playback started (user initiated)");
         }).catch(error => {
-            console.log("Autoplay unmuted failed, trying muted fallback...");
+            console.log("Playback failed:", error);
+            // If it fails for some reason, maybe fallback to muted? 
+            // Or show controls again?
+            // Let's try muted just in case.
             video.muted = true;
-            video.play().then(() => {
-                console.log("Playback started (muted)");
-                // Add "Tap Video to Unmute" listener
-                const unmuteHandler = () => {
-                    video.muted = false;
-                    video.volume = 1.0;
-                    video.play();
-                };
-                video.addEventListener('click', unmuteHandler, { once: true });
-
-                // Also show a temporary visual hint if desired, or just rely on user tapping naturally.
-                // Given user instructions, we'll keep it invisible. 
-            }).catch(e => {
-                console.log("Autoplay completely failed:", e);
-                const loader = document.getElementById('video-loading');
-                if (loader) loader.innerText = "Tap START to begin";
-            });
+            video.play();
         });
     }
     video.onended = videoFinished;
