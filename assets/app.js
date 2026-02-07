@@ -125,6 +125,17 @@ function startVideoAction() {
     if (playPromise !== undefined) {
         playPromise.then(_ => {
             console.log("Playback started (user initiated)");
+
+            // Show "START QUIZ" button after 3 seconds
+            setTimeout(() => {
+                const btn = controls.querySelector('.video-btn');
+                if (btn) {
+                    btn.innerText = "START QUIZ";
+                    btn.onclick = videoFinished;
+                }
+                controls.style.display = 'flex'; // Show controls again
+            }, 3000);
+
         }).catch(error => {
             console.log("Playback failed:", error);
             // If it fails for some reason, maybe fallback to muted? 
@@ -147,13 +158,7 @@ function videoFinished() {
         video.onended = null;
     }
     document.getElementById('video-screen').classList.add('hidden');
-    // Skip Lang, Age, Name -> Go straight to Start Screen
-    // Defaulting to English if not set? It is 'en' by default.
-    document.getElementById('start-screen').classList.remove('hidden');
-
-    // Maybe hide "Welcome" text if we want to be faster? 
-    // Ensuring background is set?
-    updateBackground('assets/splash.png');
+    document.getElementById('lang-screen').classList.remove('hidden');
 }
 
 function toggleRotate() {
@@ -341,7 +346,7 @@ function showQuestion() {
     document.getElementById("options").innerHTML = html;
 
     // Interchange Background
-    let bgImage = (qIndex % 2 === 0) ? 'assets/bg1.jpg' : 'assets/bg2.jpg';
+    let bgImage = (qIndex % 2 === 0) ? 'assets/redbg.png' : 'assets/bluebg.png';
     updateBackground(bgImage);
 }
 

@@ -81,7 +81,7 @@ if ($site_id > 0) {
             background-image: var(--bg-image);
             background-size: cover;
             background-position: center;
-            filter: blur(15px) brightness(0.4);
+            filter: brightness(0.4);
             z-index: -1;
             transform: scale(1.1);
             /* Remove blur edges */
