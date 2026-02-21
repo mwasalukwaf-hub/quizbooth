@@ -13,7 +13,9 @@ FILES = {
     r"c:\xampp\htdocs\quizbooth\ba\game.php": "ba/game.php",
     r"c:\xampp\htdocs\quizbooth\index.php": "index.php",
     r"c:\xampp\htdocs\quizbooth\assets\app.js": "assets/app.js",
-    r"c:\xampp\htdocs\quizbooth\assets\smice2.mp4": "assets/smice2.mp4"
+    r"c:\xampp\htdocs\quizbooth\assets\smice2.mp4": "assets/smice2.mp4",
+    r"c:\xampp\htdocs\quizbooth\assets\redbg.png": "assets/redbg.png",
+    r"c:\xampp\htdocs\quizbooth\assets\bluebg.png": "assets/bluebg.png"
 }
 
 def upload_files():

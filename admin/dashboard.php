@@ -363,6 +363,104 @@ foreach($q_options_raw as $opt) {
     $q_options[$opt['question_id']][] = $opt;
 }
 
+// --- QUIZ ENTRIES DATA ---
+
+// Calculate "last Friday" date
+$today = new DateTime();
+$dayOfWeek = (int)$today->format('N'); // 1=Mon, 5=Fri, 7=Sun
+if ($dayOfWeek >= 5) {
+    // Today is Fri/Sat/Sun -> last Friday is this week's Friday
+    $lastFriday = clone $today;
+    $lastFriday->modify('last friday');
+    if ($dayOfWeek === 5) {
+        $lastFriday = clone $today; // Today IS Friday
+    }
+} else {
+    $lastFriday = clone $today;
+    $lastFriday->modify('last friday');
+}
+$fridayDate = $lastFriday->format('Y-m-d');
+
+// Sites used since Friday
+$sites_since_friday = $pdo->prepare("
+    SELECT s.id, s.name, s.location, COUNT(qs.id) as quiz_count,
+           MIN(qs.created_at) as first_entry, MAX(qs.created_at) as last_entry
+    FROM quiz_sessions qs
+    LEFT JOIN sites s ON qs.site_id = s.id
+    WHERE qs.created_at >= ?
+    AND qs.site_id > 0
+    GROUP BY qs.site_id
+    ORDER BY quiz_count DESC
+");
+$sites_since_friday->execute([$fridayDate . ' 00:00:00']);
+$active_sites = $sites_since_friday->fetchAll();
+
+// Total entries since Friday (including those with no site)
+$total_since_friday_stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_sessions WHERE created_at >= ?");
+$total_since_friday_stmt->execute([$fridayDate . ' 00:00:00']);
+$total_since_friday = $total_since_friday_stmt->fetchColumn();
+
+// Pagination for quiz entries
+$entries_page = isset($_GET['entries_page']) ? max(1, intval($_GET['entries_page'])) : 1;
+$entries_per_page = 50;
+$entries_offset = ($entries_page - 1) * $entries_per_page;
+
+// Filter options
+$filter_site = isset($_GET['filter_site']) ? intval($_GET['filter_site']) : 0;
+$filter_flavor = isset($_GET['filter_flavor']) ? trim($_GET['filter_flavor']) : '';
+$filter_from = isset($_GET['filter_from']) ? trim($_GET['filter_from']) : '';
+$filter_to = isset($_GET['filter_to']) ? trim($_GET['filter_to']) : '';
+
+// Build dynamic WHERE clause for entries
+$entries_where = "WHERE 1=1";
+$entries_params = [];
+
+if ($filter_site > 0) {
+    $entries_where .= " AND qs.site_id = ?";
+    $entries_params[] = $filter_site;
+}
+if ($filter_flavor !== '') {
+    $entries_where .= " AND qs.result_key = ?";
+    $entries_params[] = $filter_flavor;
+}
+if ($filter_from !== '') {
+    $entries_where .= " AND qs.created_at >= ?";
+    $entries_params[] = $filter_from . ' 00:00:00';
+}
+if ($filter_to !== '') {
+    $entries_where .= " AND qs.created_at <= ?";
+    $entries_params[] = $filter_to . ' 23:59:59';
+}
+
+// Get total count for pagination
+$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_sessions qs $entries_where");
+$count_stmt->execute($entries_params);
+$total_entries = $count_stmt->fetchColumn();
+$total_pages = max(1, ceil($total_entries / $entries_per_page));
+
+// Fetch entries with site name
+$entries_stmt = $pdo->prepare("
+    SELECT qs.id, qs.player_name, qs.result_key, qs.created_at, qs.device,
+           COALESCE(s.name, 'No Site') as site_name
+    FROM quiz_sessions qs
+    LEFT JOIN sites s ON qs.site_id = s.id
+    $entries_where
+    ORDER BY qs.created_at DESC
+    LIMIT $entries_per_page OFFSET $entries_offset
+");
+$entries_stmt->execute($entries_params);
+$quiz_entries = $entries_stmt->fetchAll();
+
+// Flavor breakdown since Friday
+$flavor_since_friday = $pdo->prepare("
+    SELECT result_key, COUNT(*) as count
+    FROM quiz_sessions
+    WHERE created_at >= ? AND result_key IS NOT NULL
+    GROUP BY result_key
+");
+$flavor_since_friday->execute([$fridayDate . ' 00:00:00']);
+$friday_flavors = $flavor_since_friday->fetchAll(PDO::FETCH_KEY_PAIR);
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -461,6 +559,9 @@ foreach($q_options_raw as $opt) {
     <div class="nav flex-column mt-3">
         <a href="#overview" class="nav-link active" onclick="showTab('overview', this)">
             <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        <a href="#quiz-entries" class="nav-link" onclick="showTab('quiz-entries', this)">
+            <i class="fas fa-clipboard-list"></i> Quiz Entries
         </a>
         <a href="#influencers" class="nav-link" onclick="showTab('influencers', this)">
             <i class="fas fa-users"></i> Influencers
@@ -578,6 +679,228 @@ foreach($q_options_raw as $opt) {
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- CONTENT: QUIZ ENTRIES -->
+    <div id="quiz-entries" class="tab-content" style="display:none;">
+        
+        <!-- Since Friday Summary -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card" style="border-left-color: #6f42c1;">
+                    <h6 class="text-muted text-uppercase small">Since Friday</h6>
+                    <h2 class="mb-0 fw-bold"><?php echo number_format($total_since_friday); ?></h2>
+                    <small class="text-muted">Total Entries</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="border-left-color: #00d2ff;">
+                    <h6 class="text-muted text-uppercase small">Black (Since Fri)</h6>
+                    <h2 class="mb-0 fw-bold"><?php echo $friday_flavors['original'] ?? 0; ?></h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="border-left-color: #ffe600;">
+                    <h6 class="text-muted text-uppercase small">Pineapple (Since Fri)</h6>
+                    <h2 class="mb-0 fw-bold"><?php echo $friday_flavors['pineapple'] ?? 0; ?></h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="border-left-color: #ff0055;">
+                    <h6 class="text-muted text-uppercase small">Guarana (Since Fri)</h6>
+                    <h2 class="mb-0 fw-bold"><?php echo $friday_flavors['guarana'] ?? 0; ?></h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Outlets Since Friday (hidden) -->
+        <div class="card content-card mb-4" style="display:none;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-map-marker-alt me-2 text-danger"></i>Active Outlets Since Friday <span class="badge bg-secondary ms-2"><?php echo date('M d', strtotime($fridayDate)); ?></span></span>
+                <span class="badge bg-dark"><?php echo count($active_sites); ?> outlet<?php echo count($active_sites) !== 1 ? 's' : ''; ?></span>
+            </div>
+            <div class="card-body">
+                <?php if (empty($active_sites)): ?>
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-store-slash fa-3x mb-3 d-block opacity-50"></i>
+                        <p class="mb-0">No outlet activity recorded since Friday.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="row g-3">
+                        <?php foreach ($active_sites as $as): ?>
+                        <div class="col-md-4 col-sm-6">
+                            <div class="border rounded-3 p-3 h-100" style="background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="fw-bold mb-0">
+                                        <i class="fas fa-store text-primary me-1"></i>
+                                        <?php echo htmlspecialchars($as['name'] ?? 'Unknown'); ?>
+                                    </h6>
+                                    <span class="badge bg-primary rounded-pill"><?php echo $as['quiz_count']; ?></span>
+                                </div>
+                                <?php if ($as['location']): ?>
+                                    <small class="text-muted d-block mb-2"><i class="fas fa-map-pin me-1"></i><?php echo htmlspecialchars($as['location']); ?></small>
+                                <?php endif; ?>
+                                <div class="d-flex justify-content-between small text-muted mt-auto">
+                                    <span title="First entry"><i class="fas fa-clock me-1"></i><?php echo date('M d, H:i', strtotime($as['first_entry'])); ?></span>
+                                    <span title="Last entry"><i class="fas fa-arrow-right me-1"></i><?php echo date('M d, H:i', strtotime($as['last_entry'])); ?></span>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card content-card mb-4">
+            <div class="card-header">
+                <i class="fas fa-filter me-2"></i>Filter Entries
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row g-3 align-items-end" id="entriesFilterForm">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Site / Outlet</label>
+                        <select name="filter_site" class="form-select form-select-sm">
+                            <option value="0">All Sites</option>
+                            <?php foreach ($sites_list as $s): ?>
+                                <option value="<?php echo $s['id']; ?>" <?php echo $filter_site == $s['id'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($s['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">Flavour</label>
+                        <select name="filter_flavor" class="form-select form-select-sm">
+                            <option value="">All Flavours</option>
+                            <option value="original" <?php echo $filter_flavor === 'original' ? 'selected' : ''; ?>>Black (Original)</option>
+                            <option value="pineapple" <?php echo $filter_flavor === 'pineapple' ? 'selected' : ''; ?>>Pineapple</option>
+                            <option value="guarana" <?php echo $filter_flavor === 'guarana' ? 'selected' : ''; ?>>Guarana</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">From</label>
+                        <input type="date" name="filter_from" class="form-control form-control-sm" value="<?php echo htmlspecialchars($filter_from); ?>">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">To</label>
+                        <input type="date" name="filter_to" class="form-control form-control-sm" value="<?php echo htmlspecialchars($filter_to); ?>">
+                    </div>
+                    <div class="col-md-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-sm btn-primary flex-grow-1" onclick="preserveTab()">
+                            <i class="fas fa-search me-1"></i> Filter
+                        </button>
+                        <a href="dashboard.php" class="btn btn-sm btn-outline-secondary" onclick="setTimeout(function(){showTab('quiz-entries', document.querySelector('[href=\'#quiz-entries\']'))}, 100)">
+                            <i class="fas fa-redo"></i>
+                        </a>
+                    </div>
+                    <input type="hidden" name="tab" value="quiz-entries">
+                </form>
+            </div>
+        </div>
+
+        <!-- Individual Quiz Entries Table -->
+        <div class="card content-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list me-2"></i>Individual Quiz Entries</span>
+                <span class="text-muted small"><?php echo number_format($total_entries); ?> total entries · Page <?php echo $entries_page; ?> of <?php echo $total_pages; ?></span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">#</th>
+                                <th>Name</th>
+                                <th>Flavour Profile</th>
+                                <th>Outlet</th>
+                                <th>Date & Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php if (empty($quiz_entries)): ?>
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>
+                                    No entries found matching your filters.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($quiz_entries as $idx => $entry): 
+                                $flavor_colors = [
+                                    'original' => ['bg' => '#e3f2fd', 'text' => '#1565c0', 'label' => 'Black'],
+                                    'pineapple' => ['bg' => '#fff9c4', 'text' => '#f57f17', 'label' => 'Pineapple'],
+                                    'guarana' => ['bg' => '#fce4ec', 'text' => '#c62828', 'label' => 'Guarana'],
+                                ];
+                                $fk = $entry['result_key'] ?? '';
+                                $fc = $flavor_colors[$fk] ?? ['bg' => '#f5f5f5', 'text' => '#666', 'label' => $fk ?: 'Pending'];
+                                $rowNum = $entries_offset + $idx + 1;
+                            ?>
+                                <tr>
+                                    <td class="ps-4 text-muted small"><?php echo $rowNum; ?></td>
+                                    <td>
+                                        <span class="fw-bold"><?php echo htmlspecialchars($entry['player_name'] ?: '—'); ?></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: <?php echo $fc['bg']; ?>; color: <?php echo $fc['text']; ?>; font-weight: 600;">
+                                            <i class="fas fa-glass-cheers me-1"></i><?php echo $fc['label']; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted small">
+                                            <i class="fas fa-store me-1"></i><?php echo htmlspecialchars($entry['site_name']); ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="small"><?php echo date('M d, Y', strtotime($entry['created_at'])); ?></span><br>
+                                        <span class="text-muted small"><?php echo date('h:i A', strtotime($entry['created_at'])); ?></span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <?php if ($total_pages > 1): ?>
+            <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+                <small class="text-muted">Showing <?php echo $entries_offset + 1; ?>–<?php echo min($entries_offset + $entries_per_page, $total_entries); ?> of <?php echo number_format($total_entries); ?></small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <?php if ($entries_page > 1): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?tab=quiz-entries&entries_page=<?php echo $entries_page - 1; ?>&filter_site=<?php echo $filter_site; ?>&filter_flavor=<?php echo urlencode($filter_flavor); ?>&filter_from=<?php echo urlencode($filter_from); ?>&filter_to=<?php echo urlencode($filter_to); ?>" onclick="preserveTab()">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                        <?php endif; ?>
+                        
+                        <?php 
+                        $start_p = max(1, $entries_page - 2);
+                        $end_p = min($total_pages, $entries_page + 2);
+                        for ($p = $start_p; $p <= $end_p; $p++): 
+                        ?>
+                            <li class="page-item <?php echo $p === $entries_page ? 'active' : ''; ?>">
+                                <a class="page-link" href="?tab=quiz-entries&entries_page=<?php echo $p; ?>&filter_site=<?php echo $filter_site; ?>&filter_flavor=<?php echo urlencode($filter_flavor); ?>&filter_from=<?php echo urlencode($filter_from); ?>&filter_to=<?php echo urlencode($filter_to); ?>" onclick="preserveTab()">
+                                    <?php echo $p; ?>
+                                </a>
+                            </li>
+                        <?php endfor; ?>
+
+                        <?php if ($entries_page < $total_pages): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?tab=quiz-entries&entries_page=<?php echo $entries_page + 1; ?>&filter_site=<?php echo $filter_site; ?>&filter_flavor=<?php echo urlencode($filter_flavor); ?>&filter_from=<?php echo urlencode($filter_from); ?>&filter_to=<?php echo urlencode($filter_to); ?>" onclick="preserveTab()">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        <?php endif; ?>
+                    </ul>
+                </nav>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -736,7 +1059,7 @@ foreach($q_options_raw as $opt) {
         <div class="row g-4">
             <?php 
             $flavors = [
-                'original' => ['color' => '#00d2ff', 'name' => 'Original'], 
+                'original' => ['color' => '#00d2ff', 'name' => 'Black'], 
                 'pineapple' => ['color' => '#ffe600', 'name' => 'Pineapple'], 
                 'guarana' => ['color' => '#ff0055', 'name' => 'Guarana']
             ];
@@ -1616,6 +1939,7 @@ function showTab(tabId, el) {
     // Update Header Text
     const titles = {
         'overview': 'Overview', 
+        'quiz-entries': 'Quiz Entries',
         'influencers': 'Manage Influencers', 
         'sites': 'Site Management',
         'prizes': 'Prize Configuration',
@@ -1628,6 +1952,23 @@ function showTab(tabId, el) {
     // Mobile sidebar close
     if(window.innerWidth < 768) toggleSidebar();
 }
+
+// Preserve tab when using filters/pagination
+function preserveTab() {
+    // Nothing extra needed — hidden input handles it
+}
+
+// Auto-restore tab from URL on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) {
+        const navLink = document.querySelector('[href="#' + tab + '"]');
+        if (navLink) {
+            showTab(tab, navLink);
+        }
+    }
+});
 
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('show');

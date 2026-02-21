@@ -4,8 +4,6 @@ const urlsToCache = [
     '../index.php',
     'app.js',
     'tada.mp3',
-    'smice.mp4',
-    'Video_Generation_Successful.mp4',
     'splash.png',
     'logo.png',
     'bg1.jpg',

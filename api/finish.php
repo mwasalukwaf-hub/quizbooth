@@ -12,13 +12,12 @@ if (!$token) {
 }
 
 try {
-    // 1. Calculate result
     $stmt = $pdo->prepare("
         SELECT result_key, COUNT(*) as total
         FROM quiz_answers
         WHERE session_token = ?
         GROUP BY result_key
-        ORDER BY total DESC
+        ORDER BY total DESC, RAND()
         LIMIT 1
     ");
     $stmt->execute([$token]);

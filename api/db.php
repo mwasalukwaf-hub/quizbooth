@@ -4,7 +4,7 @@ $host = 'localhost';
 
 // Default / Local Credentials
 $db   = 'bramex_Quizzify';
-$user = 'bramex_Quizzify';
+$user = 'root';
 $pass = ''; 
 
 // PRODUCTION CREDENTIALS (for quizzify.bramex.co.tz)

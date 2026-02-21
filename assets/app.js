@@ -24,7 +24,8 @@ const uiInfo = {
         ageNo: "NO, I'M UNDER 18",
         ageLegal: "By continuing, you agree to our terms of service and confirm you are of legal drinking age.",
         deniedTitle: "Sorry",
-        deniedMsg: "You must be 18+ to enter."
+        deniedMsg: "You must be 18+ to enter.",
+        vibeFlavor: "Your Flavour is a vibe"
     },
     'sw': {
         welcome: "Gundua haiba yako ya Smirnoff Ice.",
@@ -40,7 +41,8 @@ const uiInfo = {
         ageNo: "HAPANA, SINA 18",
         ageLegal: "Kwa kuendelea, unakubaliana na vigezo na masharti yetu na unathibitisha una umri halali wa kunywa pombe.",
         deniedTitle: "Pole",
-        deniedMsg: "Hairuhusiwi kwa walio chini ya miaka 18."
+        deniedMsg: "Hairuhusiwi kwa walio chini ya miaka 18.",
+        vibeFlavor: "Fleva yako, Vibe yako"
     }
 };
 
@@ -56,52 +58,53 @@ if ('serviceWorker' in navigator) {
 // Aggressively preload videos into cache
 function preloadVideos() {
     const videos = [
-        'assets/smice2.mp4'
+        // Video removed to prevent bandwidth contention
+        // 'assets/smice2.mp4'
     ];
 
-    // Create a background fetch for each video
-    // This primes the browser cache and Service Worker cache
-    videos.forEach(src => {
-        fetch(src, { mode: 'cors' })
-            .then(response => {
-                if (response.ok) console.log('Preloaded: ' + src);
-            })
-            .catch(err => console.log('Preload failed: ', err));
-    });
+    // For HLS, preloading segments is complex. Preload manifest only.
+    const hlsManifest = 'assets/hls/playlist.m3u8';
+    fetch(hlsManifest, { method: 'HEAD' })
+        .then(r => {
+            if (r.ok) console.log('HLS Manifest found');
+            else console.log('HLS Manifest missing (fallback to MP4)');
+        })
+        .catch(e => console.log('HLS check failed'));
 }
 
 // Start preloading immediately
 // Start preloading immediately
 window.addEventListener('load', () => {
     preloadVideos();
-    // Auto-enter app if splash is hidden (direct link mode)
-    const splash = document.getElementById('splash-screen');
-    if (splash && splash.style.display === 'none') {
-        enterApp();
-    }
+    enterApp();
 });
 
 function enterApp() {
-    let splash = document.getElementById('splash-screen');
+    // Splash screen is removed from DOM/hidden by design now.
+    // We just ensure main container is visible and start video.
     const mainContainer = document.getElementById('main-container');
     const videoScreen = document.getElementById('video-screen');
 
-    // Start fade out
-    splash.classList.add('fade-out');
+    if (mainContainer) mainContainer.classList.remove('hidden');
+    if (videoScreen) videoScreen.classList.remove('hidden');
 
-    // Prepare Containers
-    mainContainer.classList.remove('hidden');
-    videoScreen.classList.remove('hidden');
-    document.getElementById('back-btn').classList.remove('hidden');
+    // Attempt video playback immediately
+    // Note: Audio will likely be blocked unless muted.
+    // startVideoAction handles the muted fallback logic.
+    startVideoAction();
 
-    // DO NOT play video automatically. User must click START.
-
-    setTimeout(() => {
-        splash.style.display = 'none';
-        splash.classList.remove('fade-out'); // Reset class for future use
-        // Ensure background is correct
-        updateBackground('');
-    }, 500);
+    // Global listener to unmute on ANY interaction
+    const unmuteHandler = () => {
+        const video = document.getElementById('intro-video');
+        if (video) {
+            video.muted = false;
+            video.play().catch(e => console.log("Still blocked:", e));
+        }
+        document.removeEventListener('click', unmuteHandler);
+        document.removeEventListener('touchstart', unmuteHandler);
+    };
+    document.addEventListener('click', unmuteHandler);
+    document.addEventListener('touchstart', unmuteHandler);
 }
 
 function startVideoAction() {
@@ -116,35 +119,99 @@ function startVideoAction() {
     if (loader) loader.style.display = 'none';
 
     video.currentTime = 0;
+    video.muted = false; // Hope for unmuted autoplay (may require user interaction)
 
-    // User triggered this, so we can Unmute safely!
-    video.muted = false;
+    // HLS Initialization Logic
+    const hlsSrc = 'assets/hls/playlist.m3u8';
 
-    let playPromise = video.play();
-
-    if (playPromise !== undefined) {
-        playPromise.then(_ => {
-            console.log("Playback started (user initiated)");
-
-            // Show "START QUIZ" button after 3 seconds
-            setTimeout(() => {
-                const btn = controls.querySelector('.video-btn');
-                if (btn) {
-                    btn.innerText = "START QUIZ";
-                    btn.onclick = videoFinished;
-                }
-                controls.style.display = 'flex'; // Show controls again
-            }, 3000);
-
-        }).catch(error => {
-            console.log("Playback failed:", error);
-            // If it fails for some reason, maybe fallback to muted? 
-            // Or show controls again?
-            // Let's try muted just in case.
-            video.muted = true;
-            video.play();
+    // Check if HLS supported and video setup
+    if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(hlsSrc);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+            startPlayback();
+        });
+        hls.on(Hls.Events.ERROR, function (event, data) {
+            if (data.fatal) {
+                console.log("HLS Error, falling back to MP4.");
+                hls.destroy();
+                video.src = 'assets/smice2.mp4';
+                startPlayback();
+            }
         });
     }
+    // Safari/Native HLS Support
+    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = hlsSrc;
+        video.addEventListener('loadedmetadata', function () {
+            startPlayback();
+        });
+        // Ensure error fallback?
+        video.addEventListener('error', function () {
+            // Fallback to MP4 (already in source?) No, we overwrote src.
+            // If src fails, we might need to reset src to MP4.
+            console.log("Native HLS failed.");
+            video.src = 'assets/smice2.mp4';
+            startPlayback();
+        });
+    } else {
+        // Fallback or non-HLS Env
+        // But wait, the video tag already has source?
+        // Let's ensure it plays properly.
+        // If we didn't touch src, it should play the <source> tag.
+        // But since we want to dynamically choose HLS:
+        video.src = 'assets/smice2.mp4';
+        startPlayback();
+    }
+
+    function startPlayback() {
+        // Function to attempt play and unmute
+        let playPromise = video.play();
+
+        // Stall detection
+        let stallCheck = setTimeout(() => {
+            if (video.currentTime < 0.1) {
+                console.log("Video stalled, showing skip button early");
+                enableSkip();
+            }
+        }, 4000);
+
+        if (playPromise !== undefined) {
+            playPromise.then(_ => {
+                console.log("Playback started");
+                enableSkip();
+                // Removed automatic unmuting to prevent autoplay block
+                // try {
+                //     video.muted = false;
+                // } catch (e) { console.log("Unmute failed"); }
+            }).catch(e => {
+                console.log("Autoplay failed (likely due to unmuted policy):", e);
+                // Autoplay with sound failed. Show a "Tap to Unmute/Play" button overlay?
+                // Or fallback to muted, then show Unmute button.
+                video.muted = true;
+                video.play().then(() => {
+                    enableSkip();
+                    // Optional: Show an "Unmute" button or message here
+                    // For now, we just fallback to muted to ensure video is seen.
+                    console.log("Falling back to muted autoplay.");
+                });
+            });
+        }
+    }
+
+    // Helper to show skip button
+    const enableSkip = () => {
+        setTimeout(() => {
+            const btn = controls.querySelector('.video-btn');
+            if (btn) {
+                btn.innerText = "START QUIZ";
+                btn.onclick = videoFinished;
+            }
+            controls.style.display = 'flex';
+        }, 3000);
+    };
+
     video.onended = videoFinished;
 }
 window.startVideoAction = startVideoAction;
@@ -159,6 +226,7 @@ function videoFinished() {
     }
     document.getElementById('video-screen').classList.add('hidden');
     document.getElementById('lang-screen').classList.remove('hidden');
+    updateBackground(''); // Clear background for lang screen
 }
 
 function toggleRotate() {
@@ -227,13 +295,14 @@ function goBack() {
             // Back to Start
             quizScreen.classList.add('hidden');
             startScreen.classList.remove('hidden');
+            updateBackground(''); // Reset background
         }
     }
     else if (!resultScreen.classList.contains('hidden')) {
         // Back to Start (Reset)
         resultScreen.classList.add('hidden');
         startScreen.classList.remove('hidden');
-        updateBackground('assets/splash.png'); // Reset bg
+        updateBackground(''); // Reset bg (No splash)
     }
 }
 
@@ -248,6 +317,8 @@ function setLang(lang) {
 
     // Update simple UI Text
     document.getElementById('welcome-text').innerText = uiInfo[lang].welcome;
+    document.getElementById('start-screen').querySelector('h1').innerText = uiInfo[lang].vibeFlavor;
+    document.title = "Quizzify - " + uiInfo[lang].vibeFlavor;
     document.getElementById('start-btn').innerText = uiInfo[lang].start;
     document.getElementById('progress-text').innerText = uiInfo[lang].progress;
 
@@ -345,14 +416,19 @@ function showQuestion() {
     });
     document.getElementById("options").innerHTML = html;
 
-    // Interchange Background
-    let bgImage = (qIndex % 2 === 0) ? 'assets/redbg.png' : 'assets/bluebg.png';
-    updateBackground(bgImage);
+    // Solid Background for Quiz
+    document.documentElement.style.setProperty('--bg-image', 'none');
+    document.body.style.backgroundColor = '#4AC3D8';
 }
 
 function updateBackground(imageUrl) {
     let style = document.documentElement.style;
-    style.setProperty('--bg-image', `url('${imageUrl}')`);
+    if (!imageUrl || imageUrl.trim() === '') {
+        style.setProperty('--bg-image', 'none');
+    } else {
+        style.setProperty('--bg-image', `url('${imageUrl}')`);
+    }
+    document.body.style.backgroundColor = ''; // Reset to default when using image/normal flow
 }
 
 function answer(qid, oid) {
@@ -399,11 +475,9 @@ function playResultSequence(flavor) {
     img.classList.remove('hidden');
 
     // Play Sound & Animation
-    let audio = document.getElementById('tada-sound');
-    if (audio) {
-        audio.currentTime = 0;
-        audio.play().catch(e => console.log("Audio autoplay blocked", e));
-    }
+    // Play Sound & Animation removed request
+    // let audio = document.getElementById('tada-sound');
+    // if (audio) { ... }
 
 
 

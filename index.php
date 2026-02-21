@@ -44,7 +44,8 @@ if ($site_id > 0) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>window.SITE_ID = <?php echo json_encode($site_id); ?>;</script>
-    <title>Quizzify - Vibe Yako, Flavor Yako</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <title>Quizzify - Your Flavour is a vibe</title>
     <link rel="icon" href="assets/logo.png" type="image/png">
     <link rel="manifest" href="assets/manifest.json">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -565,29 +566,28 @@ if ($site_id > 0) {
 
 
 
-    <!-- Splash Screen -->
-    <div id="splash-screen" onclick="enterApp()" style="display: none;">
-        <div class="info-icon" onclick="event.stopPropagation(); toggleDisclaimer(event)">i</div>
-        <button class="btn-get-started">TAP TO START</button>
-    </div>
+    <!-- Splash Screen Removed -->
+    <!-- <div id="splash-screen" onclick="enterApp()">...</div> -->
 
     <div class="quiz-container fade-in" id="main-container">
 
         <!-- Video Screen -->
         <div id="video-screen">
             <div class="video-wrapper">
-                <video id="intro-video" playsinline webkit-playsinline preload="auto">
+                <video id="intro-video" autoplay playsinline width="100%" webkit-playsinline preload="auto">
                     <source src="assets/smice2.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div id="video-loading">LOADING VIBE...</div>
-                <div id="video-controls" class="video-controls-overlay" style="justify-content: center;">
-                    <button class="video-btn" onclick="startVideoAction()">
-                        START
-                    </button>
+                <div id="video-controls" class="video-controls-overlay" style="justify-content: center; display: none;">
+                    <button class="video-btn" onclick="videoFinished()">
+                        START QUIZ
+                    </button> 
                 </div>
             </div>
         </div>
+
+
 
 
 
@@ -644,7 +644,7 @@ if ($site_id > 0) {
 
         <!-- Start Screen -->
         <div id="start-screen" class="hidden">
-            <h1 class="mb-4">Vibe Yako, Flavor Yako</h1>
+            <h1 class="mb-4" id="main-title">Your Flavour is a vibe</h1>
             <p class="lead mb-2" id="welcome-text">Discover your Smirnoff Ice personality.</p>
             <h2 class="mb-5 display-6 text-warning" id="display-player-name"></h2>
             <button class="btn btn-lg btn-danger px-5 py-3 rounded-pill fw-bold" onclick="startQuiz()"
@@ -698,7 +698,7 @@ if ($site_id > 0) {
         </div>
     </div>
 
-    <script src="assets/app.js?v=6"></script>
+    <script src="assets/app.js?v=12"></script>
 </body>
 
 </html>
