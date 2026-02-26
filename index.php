@@ -237,9 +237,10 @@ if ($site_id > 0) {
         }
 
         /* Placeholder styling */
-        #player-name::placeholder {
-            color: rgba(255, 255, 255, 0.6) !important;
-            /* Off-white */
+        #player-name::placeholder,
+        #player-bar::placeholder {
+            color: rgba(255, 255, 255, 0.8) !important;
+            /* White / Off-white */
             font-style: italic;
         }
 
@@ -640,6 +641,18 @@ if ($site_id > 0) {
                 id="name-btn">CONTINUE</button>
         </div>
 
+        <!-- Bar Input Screen -->
+        <div id="bar-screen" class="hidden">
+            <h1 class="mb-4" id="bar-title">Which bar are you in?</h1>
+            <div class="mb-4">
+                <input type="text" id="player-bar"
+                    class="form-control form-control-lg text-center bg-transparent text-white border-white"
+                    placeholder="Enter bar name..." style="border-radius: 50px; font-size: 1.5rem;">
+            </div>
+            <button class="btn btn-lg btn-light px-5 py-3 rounded-pill fw-bold" onclick="saveBar()"
+                id="bar-btn">CONTINUE</button>
+        </div>
+
 
 
         <!-- Start Screen -->
@@ -698,7 +711,7 @@ if ($site_id > 0) {
         </div>
     </div>
 
-    <script src="assets/app.js?v=12"></script>
+    <script src="assets/app.js?v=14"></script>
 </body>
 
 </html>

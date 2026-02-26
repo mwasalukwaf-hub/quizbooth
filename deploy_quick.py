@@ -7,7 +7,9 @@ FTP_PASS = "Bib@2012aa++"
 
 FILES = {
     r"c:\xampp\htdocs\quizbooth\index.php": "index.php",
-    r"c:\xampp\htdocs\quizbooth\assets\app.js": "assets/app.js"
+    r"c:\xampp\htdocs\quizbooth\assets\app.js": "assets/app.js",
+    r"c:\xampp\htdocs\quizbooth\api\start.php": "api/start.php",
+    r"c:\xampp\htdocs\quizbooth\assets\sw.js": "assets/sw.js"
 }
 
 def upload_files():

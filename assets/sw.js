@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quizzify-v2';
+const CACHE_NAME = 'quizzify-v4';
 const urlsToCache = [
     './',
     '../index.php',

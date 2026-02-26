@@ -6,6 +6,7 @@ include 'db.php';
 $data = json_decode(file_get_contents("php://input"), true);
 $quiz_id = isset($data['quiz_id']) ? intval($data['quiz_id']) : 1;
 $player_name = isset($data['player_name']) ? trim($data['player_name']) : '';
+$bar_name = isset($data['bar_name']) ? trim($data['bar_name']) : '';
 
 // Generate a unique token
 $token = uniqid("quiz_");
@@ -43,22 +44,33 @@ try {
 
     $site_id = isset($data['site_id']) ? intval($data['site_id']) : 0;
 
-    $stmt = $pdo->prepare("INSERT INTO quiz_sessions (quiz_id, token, device, player_name, site_id) VALUES (?, ?, ?, ?, ?)");
-    $stmt->execute([$quiz_id, $token, $device, $player_name, $site_id]);
+    $stmt = $pdo->prepare("INSERT INTO quiz_sessions (quiz_id, token, device, player_name, bar_name, site_id) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$quiz_id, $token, $device, $player_name, $bar_name, $site_id]);
     
     echo json_encode(["status" => "success", "token" => $token]);
 } catch (PDOException $e) {
     if (strpos($e->getMessage(), "Unknown column 'player_name'") !== false) {
         // Quick fix: Add the column if missing!
         $pdo->exec("ALTER TABLE quiz_sessions ADD COLUMN player_name VARCHAR(100)");
+        // It's likely bar_name is also missing if player_name is missing, try adding it too
+        try {
+            $pdo->exec("ALTER TABLE quiz_sessions ADD COLUMN bar_name VARCHAR(255)");
+        } catch (PDOException $e2) {}
         // Retry
-        $stmt = $pdo->prepare("INSERT INTO quiz_sessions (quiz_id, token, device, player_name, site_id) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$quiz_id, $token, $device, $player_name, $site_id]);
+        $stmt = $pdo->prepare("INSERT INTO quiz_sessions (quiz_id, token, device, player_name, bar_name, site_id) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$quiz_id, $token, $device, $player_name, $bar_name, $site_id]);
+        echo json_encode(["status" => "success", "token" => $token]);
+    } else if (strpos($e->getMessage(), "Unknown column 'bar_name'") !== false) {
+        // Quick fix: Add the column if missing!
+        $pdo->exec("ALTER TABLE quiz_sessions ADD COLUMN bar_name VARCHAR(255)");
+        // Retry
+        $stmt = $pdo->prepare("INSERT INTO quiz_sessions (quiz_id, token, device, player_name, bar_name, site_id) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$quiz_id, $token, $device, $player_name, $bar_name, $site_id]);
         echo json_encode(["status" => "success", "token" => $token]);
     } else if (strpos($e->getMessage(), "Unknown column 'site_id'") !== false) {
         $pdo->exec("ALTER TABLE quiz_sessions ADD COLUMN site_id INT DEFAULT 0");
-        $stmt = $pdo->prepare("INSERT INTO quiz_sessions (quiz_id, token, device, player_name, site_id) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$quiz_id, $token, $device, $player_name, $site_id]);
+        $stmt = $pdo->prepare("INSERT INTO quiz_sessions (quiz_id, token, device, player_name, bar_name, site_id) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$quiz_id, $token, $device, $player_name, $bar_name, $site_id]);
         echo json_encode(["status" => "success", "token" => $token]);
     } else {
         http_response_code(500);

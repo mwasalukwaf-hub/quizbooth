@@ -25,7 +25,9 @@ const uiInfo = {
         ageLegal: "By continuing, you agree to our terms of service and confirm you are of legal drinking age.",
         deniedTitle: "Sorry",
         deniedMsg: "You must be 18+ to enter.",
-        vibeFlavor: "Your Flavour is a vibe"
+        vibeFlavor: "Your Flavour is a vibe",
+        barTitle: "Which bar are you in?",
+        barPlaceholder: "Enter bar name..."
     },
     'sw': {
         welcome: "Gundua haiba yako ya Smirnoff Ice.",
@@ -42,7 +44,9 @@ const uiInfo = {
         ageLegal: "Kwa kuendelea, unakubaliana na vigezo na masharti yetu na unathibitisha una umri halali wa kunywa pombe.",
         deniedTitle: "Pole",
         deniedMsg: "Hairuhusiwi kwa walio chini ya miaka 18.",
-        vibeFlavor: "Fleva yako, Vibe yako"
+        vibeFlavor: "Fleva yako, Vibe yako",
+        barTitle: "Uko baa gani?",
+        barPlaceholder: "Andika jina la baa..."
     }
 };
 
@@ -244,6 +248,7 @@ function goBack() {
     const langScreen = document.getElementById('lang-screen');
     const ageScreen = document.getElementById('age-screen');
     const nameScreen = document.getElementById('name-screen');
+    const barScreen = document.getElementById('bar-screen');
     const startScreen = document.getElementById('start-screen');
     const quizScreen = document.getElementById('quiz-screen');
     const resultScreen = document.getElementById('result-screen');
@@ -281,10 +286,15 @@ function goBack() {
         nameScreen.classList.add('hidden');
         ageScreen.classList.remove('hidden');
     }
-    else if (!startScreen.classList.contains('hidden')) {
+    else if (!barScreen.classList.contains('hidden')) {
         // Back to Name
-        startScreen.classList.add('hidden');
+        barScreen.classList.add('hidden');
         nameScreen.classList.remove('hidden');
+    }
+    else if (!startScreen.classList.contains('hidden')) {
+        // Back to Bar
+        startScreen.classList.add('hidden');
+        barScreen.classList.remove('hidden');
     }
     else if (!quizScreen.classList.contains('hidden')) {
         // Back in Quiz
@@ -327,6 +337,10 @@ function setLang(lang) {
     document.getElementById('name-btn').innerText = uiInfo[lang].continue;
     document.getElementById('player-name').placeholder = uiInfo[lang].namePlaceholder;
 
+    document.getElementById('bar-title').innerText = uiInfo[lang].barTitle;
+    document.getElementById('bar-btn').innerText = uiInfo[lang].continue;
+    document.getElementById('player-bar').placeholder = uiInfo[lang].barPlaceholder;
+
     // Age Screen Texts
     document.getElementById('age-title').innerText = uiInfo[lang].ageTitle;
     document.getElementById('age-yes').innerText = uiInfo[lang].ageYes;
@@ -363,6 +377,19 @@ function saveName() {
     document.getElementById('display-player-name').innerText = "Hey, " + playerName + "!";
 
     document.getElementById('name-screen').classList.add('hidden');
+    document.getElementById('bar-screen').classList.remove('hidden');
+}
+
+let playerBar = '';
+function saveBar() {
+    let input = document.getElementById('player-bar').value;
+    if (input.trim() === '') {
+        alert(currentLang === 'en' ? "Please enter the bar name" : "Tafadhali ingiza jina la baa");
+        return;
+    }
+    playerBar = input;
+
+    document.getElementById('bar-screen').classList.add('hidden');
     document.getElementById('start-screen').classList.remove('hidden');
 }
 
@@ -370,7 +397,7 @@ function startQuiz() {
     fetch('api/start.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quiz_id: quizId, player_name: playerName, site_id: siteId })
+        body: JSON.stringify({ quiz_id: quizId, player_name: playerName, bar_name: playerBar, site_id: siteId })
     })
         .then(r => r.json())
         .then(d => {
