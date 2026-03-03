@@ -369,40 +369,25 @@ foreach($q_options_raw as $opt) {
 
 // --- QUIZ ENTRIES DATA ---
 
-// Calculate "last Friday" date
+// (Friday logic removed)
 $today = new DateTime();
-$dayOfWeek = (int)$today->format('N'); // 1=Mon, 5=Fri, 7=Sun
-if ($dayOfWeek >= 5) {
-    // Today is Fri/Sat/Sun -> last Friday is this week's Friday
-    $lastFriday = clone $today;
-    $lastFriday->modify('last friday');
-    if ($dayOfWeek === 5) {
-        $lastFriday = clone $today; // Today IS Friday
-    }
-} else {
-    $lastFriday = clone $today;
-    $lastFriday->modify('last friday');
-}
-$fridayDate = $lastFriday->format('Y-m-d');
+$fridayDate = '2000-01-01'; // Fallback to far past to show all data if needed, but better to remove the WHERE clause entirely in queries below.
 
-// Sites used since Friday
-$sites_since_friday = $pdo->prepare("
+// All Sites used
+$sites_all_time = $pdo->prepare("
     SELECT s.id, s.name, s.location, COUNT(qs.id) as quiz_count,
            MIN(qs.created_at) as first_entry, MAX(qs.created_at) as last_entry
     FROM quiz_sessions qs
     LEFT JOIN sites s ON qs.site_id = s.id
-    WHERE qs.created_at >= ?
-    AND qs.site_id > 0
+    WHERE qs.site_id > 0
     GROUP BY qs.site_id
     ORDER BY quiz_count DESC
 ");
-$sites_since_friday->execute([$fridayDate . ' 00:00:00']);
-$active_sites = $sites_since_friday->fetchAll();
+$sites_all_time->execute();
+$active_sites = $sites_all_time->fetchAll();
 
-// Total entries since Friday (including those with no site)
-$total_since_friday_stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_sessions WHERE created_at >= ?");
-$total_since_friday_stmt->execute([$fridayDate . ' 00:00:00']);
-$total_since_friday = $total_since_friday_stmt->fetchColumn();
+// Total entries
+$total_all_time = $pdo->query("SELECT COUNT(*) FROM quiz_sessions")->fetchColumn();
 
 // Pagination for quiz entries
 $entries_page = isset($_GET['entries_page']) ? max(1, intval($_GET['entries_page'])) : 1;
@@ -456,18 +441,18 @@ $entries_stmt->execute($entries_params);
 $quiz_entries = $entries_stmt->fetchAll();
 
 // Flavor breakdown since Friday
-$flavor_since_friday = $pdo->prepare("
+$flavor_all_time_stmt = $pdo->prepare("
     SELECT result_key, COUNT(*) as count
     FROM quiz_sessions
-    WHERE created_at >= ? AND result_key IS NOT NULL
+    WHERE result_key IS NOT NULL
     GROUP BY result_key
 ");
-$flavor_since_friday->execute([$fridayDate . ' 00:00:00']);
-$friday_flavors = $flavor_since_friday->fetchAll(PDO::FETCH_KEY_PAIR);
+$flavor_all_time_stmt->execute();
+$all_time_flavors = $flavor_all_time_stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-// Calculate Friday Incomplete
-$friday_completed = array_sum($friday_flavors);
-$friday_incomplete = $total_since_friday - $friday_completed;
+// Calculate All-Time Incomplete
+$total_completed_all = array_sum($all_time_flavors);
+$total_incomplete_all = $total_all_time - $total_completed_all;
 
 ?>
 <!DOCTYPE html>
@@ -703,32 +688,32 @@ $friday_incomplete = $total_since_friday - $friday_completed;
         <div class="row g-4 mb-4">
             <div class="col-md-2">
                 <div class="stat-card" style="border-left-color: #6f42c1;">
-                    <h6 class="text-muted text-uppercase small">Starts (Fri+)</h6>
-                    <h2 class="mb-0 fw-bold"><?php echo number_format($total_since_friday); ?></h2>
+                    <h6 class="text-muted text-uppercase small">All-Time Starts</h6>
+                    <h2 class="mb-0 fw-bold"><?php echo number_format($total_all_time); ?></h2>
                 </div>
             </div>
             <div class="col-md-2">
                 <div class="stat-card" style="border-left-color: #f39c12;">
-                    <h6 class="text-muted text-uppercase small">Incomplete</h6>
-                    <h2 class="mb-0 fw-bold"><?php echo number_format($friday_incomplete); ?></h2>
+                    <h6 class="text-muted text-uppercase small">All-Time Incomplete</h6>
+                    <h2 class="mb-0 fw-bold"><?php echo number_format($total_incomplete_all); ?></h2>
                 </div>
             </div>
             <div class="col-md-2">
                 <div class="stat-card" style="border-left-color: #00d2ff;">
-                    <h6 class="text-muted text-uppercase small">Black (Fri+)</h6>
-                    <h2 class="mb-0 fw-bold"><?php echo $friday_flavors['original'] ?? 0; ?></h2>
+                    <h6 class="text-muted text-uppercase small">Black (Total)</h6>
+                    <h2 class="mb-0 fw-bold"><?php echo $all_time_flavors['original'] ?? 0; ?></h2>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stat-card" style="border-left-color: #ffe600;">
-                    <h6 class="text-muted text-uppercase small">Pineapple (Fri+)</h6>
-                    <h2 class="mb-0 fw-bold"><?php echo $friday_flavors['pineapple'] ?? 0; ?></h2>
+                    <h6 class="text-muted text-uppercase small">Pineapple (Total)</h6>
+                    <h2 class="mb-0 fw-bold"><?php echo $all_time_flavors['pineapple'] ?? 0; ?></h2>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stat-card" style="border-left-color: #ff0055;">
-                    <h6 class="text-muted text-uppercase small">Guarana (Fri+)</h6>
-                    <h2 class="mb-0 fw-bold"><?php echo $friday_flavors['guarana'] ?? 0; ?></h2>
+                    <h6 class="text-muted text-uppercase small">Guarana (Total)</h6>
+                    <h2 class="mb-0 fw-bold"><?php echo $all_time_flavors['guarana'] ?? 0; ?></h2>
                 </div>
             </div>
         </div>
@@ -736,7 +721,7 @@ $friday_incomplete = $total_since_friday - $friday_completed;
         <!-- Active Outlets Since Friday (hidden) -->
         <div class="card content-card mb-4" style="display:none;">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-map-marker-alt me-2 text-danger"></i>Active Outlets Since Friday <span class="badge bg-secondary ms-2"><?php echo date('M d', strtotime($fridayDate)); ?></span></span>
+                <span><i class="fas fa-map-marker-alt me-2 text-danger"></i>Active Outlets (All-Time)</span>
                 <span class="badge bg-dark"><?php echo count($active_sites); ?> outlet<?php echo count($active_sites) !== 1 ? 's' : ''; ?></span>
             </div>
             <div class="card-body">
