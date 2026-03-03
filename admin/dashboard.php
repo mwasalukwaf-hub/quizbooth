@@ -556,15 +556,6 @@ $total_incomplete_all = $total_all_time - $total_completed_all;
         <a href="#quiz-entries" class="nav-link" onclick="showTab('quiz-entries', this)">
             <i class="fas fa-clipboard-list"></i> Quiz Entries
         </a>
-        <a href="#influencers" class="nav-link" onclick="showTab('influencers', this)">
-            <i class="fas fa-users"></i> Influencers
-        </a>
-        <a href="#sites" class="nav-link" onclick="showTab('sites', this)">
-            <i class="fas fa-map-marker-alt"></i> Sites & BAs
-        </a>
-        <a href="#prizes" class="nav-link" onclick="showTab('prizes', this)">
-            <i class="fas fa-gift"></i> Prizes
-        </a>
         <a href="#media" class="nav-link" onclick="showTab('media', this)">
             <i class="fas fa-images"></i> Media Manager
         </a>
