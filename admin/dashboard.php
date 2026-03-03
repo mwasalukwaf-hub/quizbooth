@@ -820,7 +820,6 @@ $total_incomplete_all = $total_all_time - $total_completed_all;
                                 <th>Name</th>
                                 <th>Bar</th>
                                 <th>Flavour Profile</th>
-                                <th>Outlet</th>
                                 <th>Date & Time</th>
                             </tr>
                         </thead>
@@ -856,11 +855,7 @@ $total_incomplete_all = $total_all_time - $total_completed_all;
                                             <i class="fas fa-glass-cheers me-1"></i><?php echo $fc['label']; ?>
                                         </span>
                                     </td>
-                                    <td>
-                                        <span class="text-muted small">
-                                            <i class="fas fa-store me-1"></i><?php echo htmlspecialchars($entry['site_name']); ?>
-                                        </span>
-                                    </td>
+
                                     <td>
                                         <span class="small"><?php echo date('M d, Y', strtotime($entry['created_at'])); ?></span><br>
                                         <span class="text-muted small"><?php echo date('h:i A', strtotime($entry['created_at'])); ?></span>
