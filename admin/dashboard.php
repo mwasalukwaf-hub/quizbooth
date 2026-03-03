@@ -344,6 +344,10 @@ $flavor_stats = $pdo->query("
     GROUP BY result_key
 ")->fetchAll(PDO::FETCH_KEY_PAIR);
 
+// Calculate Incomplete
+$total_completed = array_sum($flavor_stats);
+$incomplete_sessions = $total_plays - $total_completed;
+
 // Lists
 $influencers = $pdo->query("SELECT * FROM influencers ORDER BY created_at DESC")->fetchAll();
 $sites_list = $pdo->query("SELECT * FROM sites ORDER BY created_at DESC")->fetchAll();
@@ -460,6 +464,10 @@ $flavor_since_friday = $pdo->prepare("
 ");
 $flavor_since_friday->execute([$fridayDate . ' 00:00:00']);
 $friday_flavors = $flavor_since_friday->fetchAll(PDO::FETCH_KEY_PAIR);
+
+// Calculate Friday Incomplete
+$friday_completed = array_sum($friday_flavors);
+$friday_incomplete = $total_since_friday - $friday_completed;
 
 ?>
 <!DOCTYPE html>
@@ -622,15 +630,21 @@ $friday_flavors = $flavor_since_friday->fetchAll(PDO::FETCH_KEY_PAIR);
     <!-- CONTENT: OVERVIEW -->
     <div id="overview" class="tab-content">
         <div class="row g-4 mb-4">
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <h6 class="text-muted text-uppercase small">Total Sessions</h6>
+            <div class="col-md-2">
+                <div class="stat-card" style="border-left-color: #6c757d;">
+                    <h6 class="text-muted text-uppercase small">Total Starts</h6>
                     <h2 class="mb-0 fw-bold"><?php echo number_format($total_plays); ?></h2>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <div class="stat-card" style="border-left-color: #f39c12;">
+                    <h6 class="text-muted text-uppercase small">Incomplete</h6>
+                    <h2 class="mb-0 fw-bold"><?php echo number_format($incomplete_sessions); ?></h2>
+                </div>
+            </div>
+            <div class="col-md-2">
                 <div class="stat-card" style="border-left-color: #00d2ff;">
-                    <h6 class="text-muted text-uppercase small">Original Vibe</h6>
+                    <h6 class="text-muted text-uppercase small">Black Vibe</h6>
                     <h2 class="mb-0 fw-bold"><?php echo $flavor_stats['original'] ?? 0; ?></h2>
                 </div>
             </div>
@@ -687,28 +701,33 @@ $friday_flavors = $flavor_since_friday->fetchAll(PDO::FETCH_KEY_PAIR);
         
         <!-- Since Friday Summary -->
         <div class="row g-4 mb-4">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="stat-card" style="border-left-color: #6f42c1;">
-                    <h6 class="text-muted text-uppercase small">Since Friday</h6>
+                    <h6 class="text-muted text-uppercase small">Starts (Fri+)</h6>
                     <h2 class="mb-0 fw-bold"><?php echo number_format($total_since_friday); ?></h2>
-                    <small class="text-muted">Total Entries</small>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <div class="stat-card" style="border-left-color: #f39c12;">
+                    <h6 class="text-muted text-uppercase small">Incomplete</h6>
+                    <h2 class="mb-0 fw-bold"><?php echo number_format($friday_incomplete); ?></h2>
+                </div>
+            </div>
+            <div class="col-md-2">
                 <div class="stat-card" style="border-left-color: #00d2ff;">
-                    <h6 class="text-muted text-uppercase small">Black (Since Fri)</h6>
+                    <h6 class="text-muted text-uppercase small">Black (Fri+)</h6>
                     <h2 class="mb-0 fw-bold"><?php echo $friday_flavors['original'] ?? 0; ?></h2>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stat-card" style="border-left-color: #ffe600;">
-                    <h6 class="text-muted text-uppercase small">Pineapple (Since Fri)</h6>
+                    <h6 class="text-muted text-uppercase small">Pineapple (Fri+)</h6>
                     <h2 class="mb-0 fw-bold"><?php echo $friday_flavors['pineapple'] ?? 0; ?></h2>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stat-card" style="border-left-color: #ff0055;">
-                    <h6 class="text-muted text-uppercase small">Guarana (Since Fri)</h6>
+                    <h6 class="text-muted text-uppercase small">Guarana (Fri+)</h6>
                     <h2 class="mb-0 fw-bold"><?php echo $friday_flavors['guarana'] ?? 0; ?></h2>
                 </div>
             </div>
