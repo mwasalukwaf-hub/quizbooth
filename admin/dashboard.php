@@ -651,18 +651,18 @@ $total_incomplete_all = $total_all_time - $total_completed_all;
             </div>
             <div class="col-md-4">
                 <div class="card content-card h-100">
-                    <div class="card-header border-0 bg-white">Top Influencers</div>
+                    <div class="card-header border-0 bg-white">Top five Bars</div>
                     <div class="card-body p-0">
                         <div class="list-group list-group-flush">
                             <?php
-                            $top_stats = $pdo->query("SELECT influencer, COUNT(*) as c FROM quiz_sessions WHERE influencer IS NOT NULL AND influencer != '' GROUP BY influencer ORDER BY c DESC LIMIT 6")->fetchAll();
-                            foreach($top_stats as $stat): ?>
+                            $top_bars = $pdo->query("SELECT bar_name, COUNT(*) as c FROM quiz_sessions WHERE bar_name IS NOT NULL AND bar_name != '' GROUP BY bar_name ORDER BY c DESC LIMIT 5")->fetchAll();
+                            foreach($top_bars as $stat): ?>
                                 <div class="list-group-item d-flex justify-content-between align-items-center px-4 py-3 border-0">
-                                    <span class="fw-medium"><?php echo htmlspecialchars($stat['influencer']); ?></span>
+                                    <span class="fw-medium"><?php echo htmlspecialchars($stat['bar_name']); ?></span>
                                     <span class="badge bg-light text-dark rounded-pill"><?php echo $stat['c']; ?></span>
                                 </div>
                             <?php endforeach; ?>
-                            <?php if(empty($top_stats)): ?>
+                            <?php if(empty($top_bars)): ?>
                                 <div class="p-4 text-center text-muted">No data yet</div>
                             <?php endif; ?>
                         </div>
