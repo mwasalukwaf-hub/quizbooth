@@ -799,7 +799,12 @@ $total_incomplete_all = $total_all_time - $total_completed_all;
         <!-- Individual Quiz Entries Table -->
         <div class="card content-card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-list me-2"></i>Individual Quiz Entries</span>
+                <span>
+                    <i class="fas fa-list me-2"></i>Individual Quiz Entries
+                    <a href="export_entries.php?filter_flavor=<?php echo urlencode($filter_flavor); ?>&filter_from=<?php echo urlencode($filter_from); ?>&filter_to=<?php echo urlencode($filter_to); ?>" class="btn btn-sm btn-success ms-3">
+                        <i class="fas fa-file-csv me-1"></i> Export to CSV
+                    </a>
+                </span>
                 <span class="text-muted small"><?php echo number_format($total_entries); ?> total entries · Page <?php echo $entries_page; ?> of <?php echo $total_pages; ?></span>
             </div>
             <div class="card-body p-0">
