@@ -440,7 +440,7 @@ $total_pages = max(1, ceil($total_entries / $entries_per_page));
 
 // Fetch entries with site name
 $entries_stmt = $pdo->prepare("
-    SELECT qs.id, qs.player_name, qs.result_key, qs.created_at, qs.device,
+    SELECT qs.id, qs.player_name, qs.bar_name, qs.result_key, qs.created_at, qs.device,
            COALESCE(s.name, 'No Site') as site_name
     FROM quiz_sessions qs
     LEFT JOIN sites s ON qs.site_id = s.id
@@ -814,6 +814,7 @@ $friday_flavors = $flavor_since_friday->fetchAll(PDO::FETCH_KEY_PAIR);
                             <tr>
                                 <th class="ps-4">#</th>
                                 <th>Name</th>
+                                <th>Bar</th>
                                 <th>Flavour Profile</th>
                                 <th>Outlet</th>
                                 <th>Date & Time</th>
@@ -842,6 +843,9 @@ $friday_flavors = $flavor_since_friday->fetchAll(PDO::FETCH_KEY_PAIR);
                                     <td class="ps-4 text-muted small"><?php echo $rowNum; ?></td>
                                     <td>
                                         <span class="fw-bold"><?php echo htmlspecialchars($entry['player_name'] ?: '—'); ?></span>
+                                    </td>
+                                    <td>
+                                        <span class="text-info small fw-bold"><?php echo htmlspecialchars($entry['bar_name'] ?: '—'); ?></span>
                                     </td>
                                     <td>
                                         <span class="badge rounded-pill px-3 py-2" style="background-color: <?php echo $fc['bg']; ?>; color: <?php echo $fc['text']; ?>; font-weight: 600;">
